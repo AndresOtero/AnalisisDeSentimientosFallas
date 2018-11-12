@@ -60,13 +60,15 @@ def calcularSentimientoComentario(rows,diccRowNames):
 		newRow=[]
 		Rating=int(row[diccRowNames["Rating"]])
 		Recommended=int(row[diccRowNames["Recommended IND"]])
-		PositiveFeedbackCount=row[diccRowNames["Positive Feedback Count"]]
-		if(Rating==3 or (Rating==4 and Recommended==0) or (Rating==2 and Recommended==1) ):
-			newRow=[row[diccRowNames["Review Text"]]]+["NEUTRA"]
-		elif(Rating>=4):
-			newRow=[row[diccRowNames["Review Text"]]]+["POSITIVA"]
+		PositiveFeedbackCount=int(row[diccRowNames["Positive Feedback Count"]])
+		if ((Rating==5 and Recommended==0) or(Rating<=2 and Recommended==1)):#or (PositiveFeedbackCount==0)):
+			continue
+		if(Rating==3 or (Rating==4) ):
+			newRow=["'"+row[diccRowNames["Review Text"]]+"'"]+["NEUTRA"]
+		elif(Rating>=5):
+			newRow=["'"+row[diccRowNames["Review Text"]]+"'"]+["POSITIVA"]
 		elif(Rating<=2):
-			newRow=[row[diccRowNames["Review Text"]]]+["NEGATIVA"]
+			newRow=["'"+row[diccRowNames["Review Text"]]+"'"]+["NEGATIVA"]
 		newRows.append(newRow)
 	diccRowNames={}
 	diccRowNames["Review Text"]=0
@@ -109,9 +111,19 @@ newRows=[]
 for row in rows:
 	newRow= []
 	for r in row:
-		newRow.append(	r.replace("\n", " "))
+		r1=r.replace("\n", " ")
+		r2=r1.replace('"'," ")
+		r3=r2.replace('/'," ")
+		r4=r3.replace(',',".")
+		r5=r4.replace("'",".")
+		r6=r5.replace('-',".")
+		newRow.append(	r6)
 	newRows.append(newRow)
+
+
 print(diccClassName)
+
+
 
 rows=newRows
 rowsSentimientos=filtrarSinCategorias(rows,diccRowNames,categoriasAFiltrarSentimientos)
@@ -137,10 +149,19 @@ print(diccCategoryClassName)
 diccCategorySentiment,rowsSentimientos_Numbers=replaceCategoriaPorNumero(rowsSentimientos,1)
 print(diccCategorySentiment)
 
+print ("Sentimientos len: "+ str(len(rowsSentimientos)))
+print ("ClassName len: "+ str(len(rowsClassName)))
+
 with open('reviewsSentimientos.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["Review Text","Sentimiento"])
     for row in rowsSentimientos:
+    	writer.writerow(row)
+
+with open('reviewsSentimientosWithNumber.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(["Review Text","Sentimiento"])
+    for row in rowsSentimientos_Numbers:
     	writer.writerow(row)
 
 with open('reviewsClassName.csv', 'w', newline='') as csvfile:
