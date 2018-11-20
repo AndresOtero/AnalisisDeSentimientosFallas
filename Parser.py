@@ -1,26 +1,22 @@
 import csv
+
 def parse(filename):
 	csvfile= open(filename, 'r') 
 	reader=csv.reader(csvfile,delimiter=',')
 	rowNames=next(reader)
-	print(rowNames)
 	rowNames[0]="ID"
 	diccRowNames={}
 	i=0
 	for rowName in rowNames:
-		print( rowName)
 		diccRowNames[rowName]=i
 		i=i+1
-	print (diccRowNames)
 	rows=[]
 	for row in reader:
 		rows.append(row)
 	return rowNames,diccRowNames,rows
 
 def filtrarSinCategorias(rows,diccRowNames,categorias):
-	print (categorias)
 	indices= ([ diccRowNames[categoria] for categoria in categorias])
-	print (indices)
 	for categoria in categorias:
 		newRows=[]
 		for row in rows:
@@ -57,15 +53,15 @@ def categoriasAEleminar(diccFreq,minimo):
 def calcularSentimientoComentario(rows,diccRowNames):
 	newRows=[]
 	for row in rows:
-		newRow=[]
+		newRow=[]		
 		Rating=int(row[diccRowNames["Rating"]])
 		Recommended=int(row[diccRowNames["Recommended IND"]])
 		PositiveFeedbackCount=int(row[diccRowNames["Positive Feedback Count"]])
-		if ((Rating==5 and Recommended==0) or(Rating<=2 and Recommended==1)):#or (PositiveFeedbackCount==0)):
-			continue
-		if(Rating==3 or (Rating==4) ):
+		#if ((Rating==5 and Recommended==0) or(Rating<=2 and Recommended==1)):#or (PositiveFeedbackCount==0)):
+		#	continue
+		if(Rating==3):
 			newRow=["'"+row[diccRowNames["Review Text"]]+"'"]+["NEUTRA"]
-		elif(Rating>=5):
+		elif(Rating>=4):
 			newRow=["'"+row[diccRowNames["Review Text"]]+"'"]+["POSITIVA"]
 		elif(Rating<=2):
 			newRow=["'"+row[diccRowNames["Review Text"]]+"'"]+["NEGATIVA"]
@@ -90,82 +86,63 @@ def replaceCategoriaPorNumero(rows,cat_number):
 		newRows.append(newRow)
 	return dicc,newRows
 
+def makeDiccCategoriesToFilter(categoriasAFiltrar): 
+	diccClassName={}
+	i=0
+	for cat in categoriasAFiltrar:
+		diccClassName[cat]=i
+		i+=1
+	return diccClassName
+
+def filterBadCharactersfromRows(rows):
+	newRows=[]
+	for row in rows:
+		newRow= []
+		for r in row:
+			r1=r.replace("\n", ".")
+			r2=r1.replace('"',".")
+			r3=r2.replace('/',".")
+			r4=r3.replace(',',".")
+			r5=r4.replace("'",".")
+			r6=r5.replace('-',".")
+			newRow.append(r6)
+		newRows.append(newRow)
+	return newRows
+
+
+def filterCategories(rows,cat,categories):
+	newRows=[]
+	for row in rows:
+		if row[cat] not in categories:
+			newRows.append(row)
+	return newRows
+
+
+
 rowNames,diccRowNames,rows=parse('reviews.csv')
 categoriasAFiltrarSentimientos=["Recommended IND","Rating","Positive Feedback Count","Review Text"]
-diccSentimientos={}
-i=0
-for cat in categoriasAFiltrarSentimientos:
-	diccSentimientos[cat]=i
-	i+=1
-
+diccSentimientos=makeDiccCategoriesToFilter(categoriasAFiltrarSentimientos)
 categoriasAFiltrarClassName=["Review Text","Class Name"]
+diccClassName=makeDiccCategoriesToFilter(categoriasAFiltrarClassName)
 
-diccClassName={}
-i=0
-for cat in categoriasAFiltrarClassName:
-	
-	diccClassName[cat]=i
-	i+=1
-
-newRows=[]
-for row in rows:
-	newRow= []
-	for r in row:
-		r1=r.replace("\n", " ")
-		r2=r1.replace('"'," ")
-		r3=r2.replace('/'," ")
-		r4=r3.replace(',',".")
-		r5=r4.replace("'",".")
-		r6=r5.replace('-',".")
-		newRow.append(	r6)
-	newRows.append(newRow)
-
-
-print(diccClassName)
-
-
-
-rows=newRows
+rows=filterBadCharactersfromRows(rows)
 rowsSentimientos=filtrarSinCategorias(rows,diccRowNames,categoriasAFiltrarSentimientos)
-print ("Sentimientos: "+ str(len(rowsSentimientos)))
 rowsClassName=filtrarSinCategorias(rows,diccRowNames,categoriasAFiltrarClassName)
-print ("ClassName: "+ str(len(rowsClassName)))
 diccFreq=contarCategorias(rowsClassName,diccClassName,"Class Name")
 print(diccFreq)
-
-
-
-
-
-diccSentimientos,rowsSentimientos=calcularSentimientoComentario(rowsSentimientos,diccSentimientos)
-print ("Sentimientos: "+ str(len(rowsSentimientos)))
-diccFreq=contarCategorias(rowsSentimientos,diccSentimientos,"Sentimiento")
+categoriesToFilter=[x for x in diccFreq if diccFreq[x]<10]
+rowsClassName=filterCategories(rowsClassName,1,categoriesToFilter)
+diccFreq=contarCategorias(rowsClassName,diccClassName,"Class Name")
 print(diccFreq)
-
-print(rowsClassName[1])
-diccCategoryClassName,rowsClassName_Numbers=replaceCategoriaPorNumero(rowsClassName,1)
-print(rowsClassName[1])
-print(diccCategoryClassName)
-diccCategorySentiment,rowsSentimientos_Numbers=replaceCategoriaPorNumero(rowsSentimientos,1)
-print(diccCategorySentiment)
-
-print ("Sentimientos len: "+ str(len(rowsSentimientos)))
-print ("ClassName len: "+ str(len(rowsClassName)))
-
+diccSentimientos,rowsSentimientos=calcularSentimientoComentario(rowsSentimientos,diccSentimientos)
 with open('reviewsSentimientos.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["Review Text","Sentimiento"])
     for row in rowsSentimientos:
     	writer.writerow(row)
-
-with open('reviewsSentimientosWithNumber.csv', 'w', newline='') as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["Review Text","Sentimiento"])
-    for row in rowsSentimientos_Numbers:
-    	writer.writerow(row)
-
 with open('reviewsClassName.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(categoriasAFiltrarClassName)
     for row in rowsClassName:
     	writer.writerow(row)
+print("Se han generado reviewsSentimientos.csv y reviewsClassName.csv")
